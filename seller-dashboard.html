@@ -17,7 +17,9 @@
 <section class="card"><button id="logout" class="secondary" style="float:right">Sign out</button><h2 id="shopName">Your shop</h2><p class="muted">Manage your handmade product listings below. New listings start as drafts.</p></section>
 <section class="card"><h2 id="formTitle">Add a handmade product</h2><form id="productForm"><label for="name">Product name</label><input id="name" required maxlength="150"><label for="description">Description</label><textarea id="description" maxlength="3000"></textarea><div class="grid"><div><label for="price">Price (USD)</label><input id="price" type="number" min="0.01" max="100000" step="0.01" required></div><div><label for="inventory">Quantity available</label><input id="inventory" type="number" min="0" max="1000000" step="1" value="1" required></div></div><label for="category">Category</label><input id="category" maxlength="100" placeholder="Wreaths, Jewelry, Home Decor…"><label for="imageUrl">Image URL 
 <input id="imageUrl" type="hidden" value="">
-</label><input id="imageUrl" 
+
+<input id="imageUrl" type="hidden" value="">
+
 <label for="productPhoto">Upload Product Photo</label>
 <input
   type="file"
@@ -28,6 +30,9 @@
   Choose a JPG, PNG, or WebP photo.
   Maximum size: 5 MB.
 </p>
+bp"
+>
+<p 
 </p><button id="saveProduct" type="submit">Save draft product</button><button id="cancelEdit" class="secondary hidden" type="button">Cancel editing</button></form></section>
 <section class="card"><h2>Your products</h2><div id="products">Loading…</div></section>
 </div>
