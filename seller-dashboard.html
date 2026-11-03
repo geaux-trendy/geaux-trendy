@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Seller Dashboard | Geaux Trendy</title>
+<style>
+:root{font-family:Arial,sans-serif;color:#241b16;background:#f8f5f1}*{box-sizing:border-box}body{margin:0}header{background:#191715;color:white;padding:22px max(20px,calc((100% - 1050px)/2))}header a{color:#e4c5a9}main{max-width:1050px;margin:32px auto;padding:0 20px}.card{background:#fff;border:1px solid #e6ddd4;border-radius:14px;padding:24px;margin-bottom:20px;box-shadow:0 3px 12px #00000008}h1{font-size:27px}h2{font-size:21px}label{display:block;font-weight:bold;margin:14px 0 6px}input,textarea{width:100%;padding:12px;border:1px solid #b9aea4;border-radius:8px;font:inherit}textarea{min-height:90px}button{background:#382a21;color:#fff;border:0;border-radius:8px;padding:12px 18px;cursor:pointer;font:inherit;margin-top:14px}button.secondary{background:#e9e0d8;color:#241b16}button:disabled{opacity:.6;cursor:wait}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.muted{color:#655b53}.product{border-top:1px solid #eee2d8;padding:15px 0}.product:first-child{border-top:0}.error{color:#a42121}.success{color:#17653a}.hidden{display:none}@media(max-width:600px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><strong>GEAUX TRENDY</strong> &nbsp; | &nbsp; Seller Dashboard <div style="margin-top:8px"><a href="/">Back to marketplace</a></div></header>
+<main>
+<h1>Manage your handmade shop</h1>
+<p id="status" role="status" aria-live="polite">Connecting securely…</p>
+<section id="login" class="card hidden"><h2>Seller sign in</h2><p class="muted">Sign in using your verified seller account.</p><form id="loginForm"><label for="email">Email</label><input id="email" type="email" required autocomplete="email"><label for="password">Password</label><input id="password" type="password" required autocomplete="current-password"><button type="submit">Sign in</button></form><p><a href="/seller-signup.html">Create a seller account</a></p></section>
+<div id="dashboard" class="hidden">
+<section class="card"><button id="logout" class="secondary" style="float:right">Sign out</button><h2 id="shopName">Your shop</h2><p class="muted">Manage your handmade product listings below. New listings start as drafts.</p></section>
+<section class="card"><h2 id="formTitle">Add a handmade product</h2><form id="productForm"><label for="name">Product name</label><input id="name" required maxlength="150"><label for="description">Description</label><textarea id="description" maxlength="3000"></textarea><div class="grid"><div><label for="price">Price (USD)</label><input id="price" type="number" min="0.01" max="100000" step="0.01" required></div><div><label for="inventory">Quantity available</label><input id="inventory" type="number" min="0" max="1000000" step="1" value="1" required></div></div><label for="category">Category</label><input id="category" maxlength="100" placeholder="Wreaths, Jewelry, Home Decor…"><label for="imageUrl">Image URL (optional)</label><input id="imageUrl" type="url" placeholder="https://..."><p class="muted">Photo uploads will be added later. For now, use a publicly accessible image URL you own or have permission to use.</p><button id="saveProduct" type="submit">Save draft product</button><button id="cancelEdit" class="secondary hidden" type="button">Cancel editing</button></form></section>
+<section class="card"><h2>Your products</h2><div id="products">Loading…</div></section>
+</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// IMPORTANT: Replace these two placeholders with your public project settings.
+const SUPABASE_URL = 'https://ylzfeviaqwzdazgpbiry.supabase.co/rest/v1/';
+const SUPABASE_KEY = 'sb_publishable_SXuCf569a5ipMKPgsRudrA_xEoz-CjE';
+const statusEl = document.getElementById('status');
+const loginEl = document.getElementById('login');
+const dashboardEl = document.getElementById('dashboard');
+const productsEl = document.getElementById('products');
+const form = document.getElementById('productForm');
+let db, shop, items = [], editingId = null;
+function status(message, isError=false){statusEl.textContent=message;statusEl.className=isError?'error':'success'}
+function showLogin(){loginEl.classList.remove('hidden');dashboardEl.classList.add('hidden')}
+function showDashboard(){loginEl.classList.add('hidden');dashboardEl.classList.remove('hidden')}
+function cents(value){return Math.round(Number(value)*100)}
+function dollars(value){return (value/100).toFixed(2)}
+async function initialize(){
+ if(SUPABASE_URL.includes('YOUR_')||SUPABASE_KEY.includes('YOUR_')){status('Setup needed: add your Supabase Project URL and publishable key to this file.',true);return}
+ if(!window.supabase){status('Could not load Supabase. Check your connection and refresh.',true);return}
+ try{db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);const {data,error}=await db.auth.getUser();if(error||!data.user){showLogin();status('Please sign in to manage your shop.');return}await loadShop(data.user.id)}catch(e){status('Connection problem: '+e.message,true)}
+}
+async function loadShop(userId){
+ const {data,error}=await db.from('shops').select('id,shop_name').eq('owner_id',userId).maybeSingle();
+ if(error){showLogin();status('Could not load shop: '+error.message,true);return}
+ if(!data){showLogin();status('No shop is linked to this account yet. Contact the marketplace administrator.',true);return}
+ shop=data;document.getElementById('shopName').textContent=shop.shop_name;showDashboard();status('Signed in successfully.');await loadProducts();
+}
+async function loadProducts(){
+ const {data,error}=await db.from('products').select('id,name,description,price_cents,inventory,image_url,category,is_active').eq('shop_id',shop.id).order('name');
+ if(error){status('Could not load products: '+error.message,true);return}
+ items=data||[];productsEl.replaceChildren();if(!items.length){productsEl.textContent='No products yet. Add your first handmade item above.';return}
+ for(const item of items){const wrap=document.createElement('div');wrap.className='product';const heading=document.createElement('strong');heading.textContent=item.name;const info=document.createElement('p');info.className='muted';info.textContent=`$${dollars(item.price_cents)} · ${item.inventory} in stock · ${item.is_active?'Active':'Draft'}`;const edit=document.createElement('button');edit.className='secondary';edit.textContent='Edit';edit.addEventListener('click',()=>editItem(item.id));const remove=document.createElement('button');remove.className='secondary';remove.textContent='Delete';remove.style.marginLeft='8px';remove.addEventListener('click',()=>deleteItem(item.id));wrap.append(heading,info,edit,remove);productsEl.append(wrap)}
+}
+function editItem(id){const item=items.find(x=>x.id===id);if(!item)return;editingId=id;document.getElementById('formTitle').textContent='Edit product';for(const field of ['name','description','category'])document.getElementById(field).value=item[field]||'';document.getElementById('price').value=dollars(item.price_cents);document.getElementById('inventory').value=item.inventory;document.getElementById('imageUrl').value=item.image_url||'';document.getElementById('saveProduct').textContent='Save changes';document.getElementById('cancelEdit').classList.remove('hidden');form.scrollIntoView({behavior:'smooth'})}
+function resetForm(){editingId=null;form.reset();document.getElementById('inventory').value=1;document.getElementById('formTitle').textContent='Add a handmade product';document.getElementById('saveProduct').textContent='Save draft product';document.getElementById('cancelEdit').classList.add('hidden')}
+form.addEventListener('submit',async event=>{event.preventDefault();if(!shop)return;const price=Number(document.getElementById('price').value),inventory=Number(document.getElementById('inventory').value);if(!Number.isFinite(price)||price<=0||!Number.isSafeInteger(cents(price))||!Number.isSafeInteger(inventory)||inventory<0){status('Enter a valid price and whole-number quantity.',true);return}const payload={name:document.getElementById('name').value.trim(),description:document.getElementById('description').value.trim(),price_cents:cents(price),inventory,category:document.getElementById('category').value.trim(),image_url:document.getElementById('imageUrl').value.trim()||null};const button=document.getElementById('saveProduct');button.disabled=true;try{let result;if(editingId){result=await db.from('products').update(payload).eq('id',editingId).eq('shop_id',shop.id)}else{result=await db.from('products').insert({...payload,shop_id:shop.id,is_active:false})}if(result.error)throw result.error;resetForm();status('Product saved successfully.');await loadProducts()}catch(e){status('Could not save product: '+e.message,true)}finally{button.disabled=false}});
+document.getElementById('cancelEdit').addEventListener('click',resetForm);
+async function deleteItem(id){if(!confirm('Delete this product permanently?'))return;const {error}=await db.from('products').delete().eq('id',id).eq('shop_id',shop.id);if(error){status('Could not delete product: '+error.message,true);return}status('Product deleted.');await loadProducts()}
+document.getElementById('loginForm').addEventListener('submit',async e=>{e.preventDefault();if(!db)return;const email=document.getElementById('email').value,password=document.getElementById('password').value;const {data,error}=await db.auth.signInWithPassword({email,password});if(error){status('Sign-in failed: '+error.message,true);return}document.getElementById('password').value='';await loadShop(data.user.id)});
+document.getElementById('logout').addEventListener('click',async()=>{await db.auth.signOut();shop=null;items=[];resetForm();showLogin();status('Signed out.')});
+initialize();
+</script>
+</body>
+</html>
