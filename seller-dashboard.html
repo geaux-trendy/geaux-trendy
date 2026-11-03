@@ -103,7 +103,103 @@ async function loadProducts(){
 }
 function editItem(id){const item=items.find(x=>x.id===id);if(!item)return;editingId=id;document.getElementById('formTitle').textContent='Edit product';for(const field of ['name','description','category'])document.getElementById(field).value=item[field]||'';document.getElementById('price').value=dollars(item.price_cents);document.getElementById('inventory').value=item.inventory;document.getElementById('imageUrl').value=item.image_url||'';document.getElementById('saveProduct').textContent='Save changes';document.getElementById('cancelEdit').classList.remove('hidden');form.scrollIntoView({behavior:'smooth'})}
 function resetForm(){editingId=null;form.reset();document.getElementById('inventory').value=1;document.getElementById('formTitle').textContent='Add a handmade product';document.getElementById('saveProduct').textContent='Save draft product';document.getElementById('cancelEdit').classList.add('hidden')}
-form.addEventListener('submit',async event=>{event.preventDefault();if(!shop)return;const price=Number(document.getElementById('price').value),inventory=Number(document.getElementById('inventory').value);if(!Number.isFinite(price)||price<=0||!Number.isSafeInteger(cents(price))||!Number.isSafeInteger(inventory)||inventory<0){status('Enter a valid price and whole-number quantity.',true);return}const payload={name:document.getElementById('name').value.trim(),description:document.getElementById('description').value.trim(),price_cents:cents(price),inventory,category:document.getElementById('category').value.trim(),image_url:document.getElementById('imageUrl').value.trim()||null};const button=document.getElementById('saveProduct');button.disabled=true;try{let result;if(editingId){result=await db.from('products').update(payload).eq('id',editingId).eq('shop_id',shop.id)}else{result=await db.from('products').insert({...payload,shop_id:shop.id,is_active:false})}if(result.error)throw result.error;resetForm();status('Product saved successfully.');await loadProducts()}catch(e){status('Could not save product: '+e.message,true)}finally{button.disabled=false}});
+
+form.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!shop) return;
+
+  const price = Number(document.getElementById('price').value);
+  const inventory = Number(document.getElementById('inventory').value);
+  const photoInput = document.getElementById('productPhoto');
+  const photo = photoInput.files[0];
+
+  if (!Number.isFinite(price) || price <= 0 ||
+      !Number.isSafeInteger(cents(price)) ||
+      !Number.isSafeInteger(inventory) || inventory < 0) {
+    status('Enter a valid price and whole-number quantity.', true);
+    return;
+  }
+
+  const allowedTypes = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp'
+  };
+
+  if (photo && (!allowedTypes[photo.type] ||
+      photo.size > 5 * 1024 * 1024)) {
+    status('Choose a JPG, PNG, or WebP image under 5 MB.', true);
+    return;
+  }
+
+  const button = document.getElementById('saveProduct');
+  button.disabled = true;
+
+  try {
+    let imageUrl = document.getElementById('imageUrl').value.trim() || null;
+
+    if (photo) {
+      status('Uploading your product photo...');
+
+      // Each seller uploads into their own shop folder.
+      const extension = allowedTypes[photo.type];
+      const fileName = crypto.randomUUID() + '.' + extension;
+      const filePath = shop.id + '/' + fileName;
+
+      const { error: uploadError } = await db.storage
+        .from('product-images')
+        .upload(filePath, photo, {
+          contentType: photo.type,
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = db.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      imageUrl = urlData.publicUrl;
+    }
+
+    const payload = {
+      name: document.getElementById('name').value.trim(),
+      description: document.getElementById('description').value.trim(),
+      price_cents: cents(price),
+      inventory: inventory,
+      category: document.getElementById('category').value.trim(),
+      image_url: imageUrl
+    };
+
+    let result;
+
+    if (editingId) {
+      result = await db.from('products')
+        .update(payload)
+        .eq('id', editingId)
+        .eq('shop_id', shop.id);
+    } else {
+      result = await db.from('products')
+        .insert({
+          ...payload,
+          shop_id: shop.id,
+          is_active: false
+        });
+    }
+
+    if (result.error) throw result.error;
+
+    resetForm();
+    status('Product and photo saved successfully!');
+    await loadProducts();
+
+  } catch (error) {
+    status('Could not save product: ' + error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
+
 document.getElementById('cancelEdit').addEventListener('click',resetForm);
 async function deleteItem(id){if(!confirm('Delete this product permanently?'))return;const {error}=await db.from('products').delete().eq('id',id).eq('shop_id',shop.id);if(error){status('Could not delete product: '+error.message,true);return}status('Product deleted.');await loadProducts()}
 document.getElementById('loginForm').addEventListener('submit',async e=>{e.preventDefault();if(!db)return;const email=document.getElementById('email').value,password=document.getElementById('password').value;const {data,error}=await db.auth.signInWithPassword({email,password});if(error){status('Sign-in failed: '+error.message,true);return}document.getElementById('password').value='';await loadShop(data.user.id)});
