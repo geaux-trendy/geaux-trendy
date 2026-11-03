@@ -99,7 +99,22 @@ async function loadProducts(){
  const {data,error}=await db.from('products').select('id,name,description,price_cents,inventory,image_url,category,is_active').eq('shop_id',shop.id).order('name');
  if(error){status('Could not load products: '+error.message,true);return}
  items=data||[];productsEl.replaceChildren();if(!items.length){productsEl.textContent='No products yet. Add your first handmade item above.';return}
- for(const item of items){const wrap=document.createElement('div');wrap.className='product';const heading=document.createElement('strong');heading.textContent=item.name;const info=document.createElement('p');info.className='muted';info.textContent=`$${dollars(item.price_cents)} · ${item.inventory} in stock · ${item.is_active?'Active':'Draft'}`;const edit=document.createElement('button');edit.className='secondary';edit.textContent='Edit';edit.addEventListener('click',()=>editItem(item.id));const remove=document.createElement('button');remove.className='secondary';remove.textContent='Delete';remove.style.marginLeft='8px';remove.addEventListener('click',()=>deleteItem(item.id));wrap.append(heading,info,edit,remove);productsEl.append(wrap)}
+ for(const item of items){const wrap=document.createElement('div');wrap.className='product';const heading=document.createElement('strong');heading.textContent=item.name;const info=document.createElement('p');info.className='muted';info.textContent=`$${dollars(item.price_cents)} · ${item.inventory} in stock · ${item.is_active?'Active':'Draft'}`;const edit=document.createElement('button');edit.className='secondary';edit.textContent='Edit';edit.addEventListener('click',()=>editItem(item.id));const remove=document.createElement('button');remove.className='secondary';remove.textContent='Delete';remove.style.marginLeft='8px';remove.addEventListener('click',()=>deleteItem(item.id));
+if (item.image_url) {
+  const photo = document.createElement('img');
+  photo.src = item.image_url;
+  photo.alt = item.name;
+  photo.loading = 'lazy';
+  photo.style.width = '180px';
+  photo.style.maxWidth = '100%';
+  photo.style.borderRadius = '10px';
+  photo.style.display = 'block';
+  photo.style.marginBottom = '12px';
+  wrap.appendChild(photo);
+}
+
+wrap.append(heading, info, edit, remove);
+;productsEl.append(wrap)}
 }
 function editItem(id){const item=items.find(x=>x.id===id);if(!item)return;editingId=id;document.getElementById('formTitle').textContent='Edit product';for(const field of ['name','description','category'])document.getElementById(field).value=item[field]||'';document.getElementById('price').value=dollars(item.price_cents);document.getElementById('inventory').value=item.inventory;document.getElementById('imageUrl').value=item.image_url||'';document.getElementById('saveProduct').textContent='Save changes';document.getElementById('cancelEdit').classList.remove('hidden');form.scrollIntoView({behavior:'smooth'})}
 function resetForm(){editingId=null;form.reset();document.getElementById('inventory').value=1;document.getElementById('formTitle').textContent='Add a handmade product';document.getElementById('saveProduct').textContent='Save draft product';document.getElementById('cancelEdit').classList.add('hidden')}
