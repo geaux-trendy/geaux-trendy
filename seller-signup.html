@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Open your handmade shop on Geaux Trendy.">
+  <title>Become a Seller | Geaux Trendy</title>
+  <style>
+  :root{--ink:#181513;--brown:#846347;--cream:#f8f5f0;--line:#e6ddd3}*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}header{background:#171413;color:white;padding:18px 7%;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}header a{color:white;text-decoration:none}.brand{font-family:Georgia,serif;font-size:24px;letter-spacing:.5px}.subtitle{color:#e1c8ad;font-size:12px;letter-spacing:2px;text-transform:uppercase}main{max-width:1030px;margin:48px auto;padding:0 22px;display:grid;grid-template-columns:1fr 1.1fr;gap:38px;align-items:start}h1{font:normal 46px/1.08 Georgia,serif;margin:12px 0 18px}h2{font:normal 28px Georgia,serif;margin:0 0 10px}.eyebrow{color:var(--brown);font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700}.price{font-size:38px;font-weight:700;margin:16px 0 4px}.price small{font-size:16px;color:#6d625a;font-weight:400}.benefits{padding-left:20px;line-height:2}.card{background:white;border:1px solid var(--line);padding:32px;border-radius:16px;box-shadow:0 12px 40px #0000000a}label{display:block;font-weight:650;font-size:14px;margin:16px 0 6px}input{width:100%;font:inherit;padding:13px;border:1px solid #bfb3a9;border-radius:8px;background:white}input:focus{outline:2px solid var(--brown);outline-offset:1px}button{width:100%;margin-top:22px;padding:14px;border:0;background:var(--ink);color:white;border-radius:8px;font:600 16px system-ui;cursor:pointer}button:disabled{opacity:.65;cursor:wait}.switch{margin-top:18px;text-align:center}.switch button{background:transparent;color:var(--brown);padding:3px;width:auto;margin:0;text-decoration:underline;font-size:14px}.notice{margin-top:16px;padding:13px;border-radius:8px;background:#f2ece6;display:none;white-space:pre-wrap}.notice.show{display:block}.muted{color:#756b63;font-size:13px}.hidden{display:none}footer{text-align:center;color:#73685f;padding:24px} @media(max-width:760px){main{display:block;margin:28px auto}.card{margin-top:24px;padding:24px}h1{font-size:38px}}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<header><a href="/" class="brand">⚜ Geaux Trendy <div class="subtitle">The Handmade Marketplace</div></a><a href="/">← Back to shopping</a></header>
+<main>
+<section><div class="eyebrow">Made with heart • Sold with pride</div><h1>Open your handmade shop.</h1><p>Join a community of makers sharing one-of-a-kind creations. Your shop starts here.</p><div class="price">$9.99 <small>/ month after trial</small></div><ul class="benefits"><li>30-day free trial</li><li>10% marketplace commission per sale</li><li>Your own handmade product listings</li></ul><p class="muted">Registration is in testing. Subscriptions, payments, and checkout are not yet enabled.</p></section>
+<section class="card"><h2 id="form-heading">Create your seller account</h2><p class="muted">Sign up with your email address. We'll send you a confirmation link.</p>
+<form id="auth-form">
+<div id="shop-field"><label for="shop-name">Your shop name</label><input id="shop-name" name="shop" autocomplete="organization" minlength="2" maxlength="80" placeholder="e.g. Magnolia Handmade" required></div>
+<label for="email">Email address</label><input id="email" type="email" autocomplete="email" required placeholder="you@example.com">
+<label for="password">Password (at least 8 characters)</label><input id="password" type="password" autocomplete="new-password" minlength="8" required>
+<button type="submit" id="submit">Create seller account</button></form>
+<div class="switch"><button type="button" id="toggle">Already registered? Sign in</button></div>
+<p role="status" aria-live="polite" class="notice" id="notice"></p>
+<div id="signed-in" class="hidden"><p>You're signed in.</p><button type="button" id="create-shop">Finish creating my shop</button><button type="button" id="sign-out">Sign out</button></div>
+</section>
+</main><footer>© 2026 Geaux Trendy • Handmade with heart</footer>
+<script>
+// CONFIGURATION: Replace ONLY these two placeholder values.
+// Use your Supabase project URL and PUBLIC publishable key (or legacy anon key).
+// NEVER use a service_role or secret key in a website file.
+const SUPABASE_URL = 'PASTE_YOUR_SUPABASE_PROJECT_URL_HERE';
+const SUPABASE_PUBLIC_KEY = 'PASTE_YOUR_SUPABASE_PUBLISHABLE_KEY_HERE';
+const READY = SUPABASE_URL.startsWith('https://') && !SUPABASE_PUBLIC_KEY.includes('PASTE_');
+const notice = document.getElementById('notice');
+const form = document.getElementById('auth-form');
+const submit = document.getElementById('submit');
+const toggle = document.getElementById('toggle');
+const signedIn = document.getElementById('signed-in');
+const createShopButton = document.getElementById('create-shop');
+let mode='signup', client;
+function message(str){notice.textContent=str;notice.classList.add('show')}
+function setBusy(b){submit.disabled=b;createShopButton.disabled=b}
+function showSignedIn(){form.classList.add('hidden');toggle.classList.add('hidden');signedIn.classList.remove('hidden')}
+async function finishShop(){
+  if(!client)return;
+  setBusy(true);
+  try{
+    const {data:{user},error:userError}=await client.auth.getUser();
+    if(userError)throw userError;
+    if(!user){message('Please sign in first to create your shop.');return}
+    if(!user.email_confirmed_at){message('Please verify your email address before creating a shop.');return}
+    const shopName = (user.user_metadata?.shop_name || '').trim();
+    if(!shopName){message('Your account is active, but no shop name is saved. Contact the site owner to finish setup.');return}
+    const {data:existing,error:lookupError}=await client.from('shops').select('id,shop_name').eq('owner_id',user.id).maybeSingle();
+    if(lookupError)throw lookupError;
+    if(existing){message('Welcome back! Your shop "'+existing.shop_name+'" already exists. Seller dashboard coming soon.');return}
+    const {error}=await client.from('shops').insert({owner_id:user.id,shop_name:shopName});
+    if(error)throw error;
+    message('Success! Your seller account is verified and your shop "'+shopName+'" has been created. Product management and payments are coming next.');
+  }catch(e){message('Could not finish shop setup: '+e.message)}finally{setBusy(false)}
+}
+function setMode(next){mode=next;const registering=mode==='signup';document.getElementById('shop-field').classList.toggle('hidden',!registering);document.getElementById('shop-name').required=registering;document.getElementById('form-heading').textContent=registering?'Create your seller account':'Seller sign in';submit.textContent=registering?'Create seller account':'Sign in';toggle.textContent=registering?'Already registered? Sign in':'New here? Create a seller account';notice.classList.remove('show');document.getElementById('password').autocomplete=registering?'new-password':'current-password'}
+toggle.addEventListener('click',()=>setMode(mode==='signup'?'signin':'signup'));
+form.addEventListener('submit',async e=>{
+  e.preventDefault();if(!client){message('Setup required: add your Supabase project URL and publishable key before using this page.');return}
+  setBusy(true);notice.classList.remove('show');
+  const email=document.getElementById('email').value.trim();const password=document.getElementById('password').value;
+  try{
+    if(mode==='signup'){
+      const shopName=document.getElementById('shop-name').value.trim();
+      if(shopName.length<2)throw new Error('Please enter a shop name of at least 2 characters.');
+      const {data,error}=await client.auth.signUp({email,password,options:{data:{shop_name:shopName},emailRedirectTo:location.origin+'/seller-signup.html'}});
+      if(error)throw error;
+      if(data.session){showSignedIn();await finishShop()}
+      else message('Check your inbox for a confirmation email. After confirming, return to this page to finish your shop setup.');
+    }else{
+      const {error}=await client.auth.signInWithPassword({email,password});if(error)throw error;
+      showSignedIn();await finishShop();
+    }
+  }catch(e){message(e.message)}finally{setBusy(false)}
+});
+document.getElementById('sign-out').addEventListener('click',async()=>{if(client)await client.auth.signOut();location.replace('/seller-signup.html')});
+createShopButton.addEventListener('click',finishShop);
+(async function init(){
+ if(!READY){message('Site owner setup needed: add the Supabase project URL and PUBLIC publishable key to this page. No real signups can happen yet.');submit.disabled=true;return}
+ if(!window.supabase){message('Could not load the Supabase library. Check the internet connection and refresh.');return}
+ try{
+  client=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLIC_KEY);
+  const {data:{session}}=await client.auth.getSession();
+  if(session){showSignedIn();await finishShop()}
+  client.auth.onAuthStateChange((_event,session)=>{if(session){showSignedIn()} });
+ }catch(e){message('Could not connect to Supabase: '+e.message)}
+})();
+</script>
+</body></html>
