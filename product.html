@@ -333,6 +333,51 @@
       }
     }
 
+const CART_KEY = 'geauxTrendyCart';
+const addToCartButton = document.getElementById('addToCart');
+const cartMessage = document.getElementById('cartMessage');
+
+let currentProduct = null;
+
+function addProductToCart() {
+  if (!currentProduct || Number(currentProduct.inventory) <= 0) {
+    cartMessage.textContent = 'This product is unavailable.';
+    return;
+  }
+
+  let cart = [];
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(CART_KEY));
+    if (Array.isArray(saved)) cart = saved;
+  } catch (_) {
+    cart = [];
+  }
+
+  const existing = cart.find(item => item.id === currentProduct.id);
+  const stock = Math.max(0, Number(currentProduct.inventory) || 0);
+
+  if (existing) {
+    if (existing.quantity >= Math.min(stock, 99)) {
+      cartMessage.textContent = 'Maximum available quantity reached.';
+      return;
+    }
+    existing.quantity += 1;
+  } else {
+    cart.push({ id: currentProduct.id, quantity: 1 });
+  }
+
+  try {
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    cartMessage.textContent = 'Added to your cart!';
+    window.location.href = 'cart.html';
+  } catch (_) {
+    cartMessage.textContent = 'Could not save your cart.';
+  }
+}
+
+addToCartButton.addEventListener('click', addProductToCart);
+
     loadProduct();
   </script>
 </body>
