@@ -70,7 +70,16 @@ async function loadPublicProducts() {
       category.style.color = '#795b49';
 
       card.append(name, price, category);
-      gallery.appendChild(card);
+      
+const link = document.createElement('a');
+link.href = 'product.html?id=' + encodeURIComponent(product.id);
+link.style.display = 'block';
+link.style.color = 'inherit';
+link.style.textDecoration = 'none';
+
+link.appendChild(card);
+gallery.appendChild(link);
+
     });
 
     message.textContent = '';
