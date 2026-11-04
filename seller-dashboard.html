@@ -113,8 +113,48 @@ if (item.image_url) {
   wrap.appendChild(photo);
 }
 
-wrap.append(heading, info, edit, remove);
-;productsEl.append(wrap)}
+
+const publish = document.createElement('button');
+publish.className = 'secondary';
+publish.textContent = item.is_active ? 'Unpublish' : 'Publish';
+publish.style.marginLeft = '8px';
+
+publish.addEventListener('click', async () => {
+  const action = item.is_active ? 'unpublish' : 'publish';
+
+  if (!confirm(`Do you want to ${action} "${item.name}"?`)) {
+    return;
+  }
+
+  publish.disabled = true;
+
+  try {
+    const { error } = await db
+      .from('products')
+      .update({ is_active: !item.is_active })
+      .eq('id', item.id)
+      .eq('shop_id', shop.id)
+      .select('id')
+      .single();
+
+    if (error) throw error;
+
+    status(item.is_active
+      ? 'Product unpublished successfully!'
+      : 'Product published successfully!');
+
+    await loadProducts();
+
+  } catch (error) {
+    status('Could not update product: ' + error.message, true);
+    publish.disabled = false;
+  }
+});
+
+wrap.append(heading, info, edit, remove, publish);
+productsEl.append(wrap);
+}
+
 }
 function editItem(id){const item=items.find(x=>x.id===id);if(!item)return;editingId=id;document.getElementById('formTitle').textContent='Edit product';for(const field of ['name','description','category'])document.getElementById(field).value=item[field]||'';document.getElementById('price').value=dollars(item.price_cents);document.getElementById('inventory').value=item.inventory;document.getElementById('imageUrl').value=item.image_url||'';document.getElementById('saveProduct').textContent='Save changes';document.getElementById('cancelEdit').classList.remove('hidden');form.scrollIntoView({behavior:'smooth'})}
 function resetForm(){editingId=null;form.reset();document.getElementById('inventory').value=1;document.getElementById('formTitle').textContent='Add a handmade product';document.getElementById('saveProduct').textContent='Save draft product';document.getElementById('cancelEdit').classList.add('hidden')}
