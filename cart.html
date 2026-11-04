@@ -1,0 +1,354 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shopping Cart | Geaux Trendy</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #faf8f5;
+  color: #26201c;
+}
+
+header {
+  background: #171412;
+  color: white;
+  padding: 24px 6%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+header a {
+  color: white;
+  text-decoration: none;
+}
+
+.brand {
+  font-size: 27px;
+  font-weight: bold;
+}
+
+main {
+  max-width: 1050px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+h1 { font-size: 32px; }
+
+.cart-item {
+  display: flex;
+  gap: 20px;
+  background: white;
+  padding: 20px;
+  margin: 16px 0;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px #00000010;
+}
+
+.cart-item img {
+  width: 125px;
+  height: 125px;
+  object-fit: cover;
+  border-radius: 9px;
+}
+
+.item-info { flex: 1; }
+
+.item-info h3 { margin: 0 0 10px; }
+
+button, .button {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  background: #795640;
+  color: white;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.remove { background: #555; }
+
+.quantity {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 15px 0;
+}
+
+.summary {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  margin-top: 25px;
+  text-align: right;
+}
+
+.total {
+  font-size: 25px;
+  font-weight: bold;
+}
+
+.notice {
+  background: #f1e9e1;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+.back {
+  display: inline-block;
+  color: #795640;
+  text-decoration: none;
+  margin: 15px 0;
+}
+
+footer {
+  background: #171412;
+  color: white;
+  text-align: center;
+  padding: 30px;
+  margin-top: 60px;
+}
+
+@media(max-width: 600px) {
+  .cart-item { flex-direction: column; }
+  .cart-item img { width: 100%; height: 200px; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <a class="brand" href="index.html">⚜ Geaux Trendy</a>
+  <a href="index.html#all-products">Continue Shopping</a>
+</header>
+
+<main>
+  <h1>🛒 Your Shopping Cart</h1>
+
+  <a class="back" href="index.html#all-products">
+    ← Back to Shopping
+  </a>
+
+  <div id="cartItems"></div>
+
+  <div class="summary">
+    <p id="itemCount">0 items</p>
+    <p class="total" id="cartTotal">$0.00</p>
+
+    <button disabled>Checkout — Coming Soon</button>
+
+    <p class="notice">
+      Secure checkout and seller payments are being prepared.
+      No purchases can be completed yet.
+    </p>
+  </div>
+</main>
+
+<footer>
+  <strong>⚜ Geaux Trendy</strong>
+  <p>Handmade with heart. © 2026 Geaux Trendy.</p>
+</footer>
+
+<script>
+const CART_KEY = 'geauxTrendyCart';
+const SUPABASE_URL =
+  'https://ylzfeviaqwzdazgpbiry.supabase.co';
+const SUPABASE_KEY =
+  'sb_publishable_SXuCf569a5ipMKPgsRudrA_xEoz-CjE';
+
+const money = cents =>
+  (cents / 100).toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  });
+
+function getCart() {
+  try {
+    const data = JSON.parse(localStorage.getItem(CART_KEY));
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCart(cart) {
+  localStorage.setItem(CART_KEY, JSON.stringify(cart));
+}
+
+async function fetchProducts(ids) {
+  if (!ids.length) return [];
+
+  const filter = ids.map(id => '"' + id + '"').join(',');
+
+  const url = SUPABASE_URL +
+    '/rest/v1/products?select=id,name,price_cents,' +
+    'image_url,inventory,is_active' +
+    '&id=in.(' + encodeURIComponent(filter) + ')' +
+    '&is_active=eq.true';
+
+  const response = await fetch(url, {
+    headers: { apikey: SUPABASE_KEY }
+  });
+
+  if (!response.ok) {
+    throw new Error('Unable to load product information.');
+  }
+
+  return response.json();
+}
+
+async function renderCart() {
+  const container = document.getElementById('cartItems');
+  const totalEl = document.getElementById('cartTotal');
+  const countEl = document.getElementById('itemCount');
+
+  container.replaceChildren();
+
+  const cart = getCart();
+
+  if (!cart.length) {
+    container.textContent =
+      'Your cart is empty. Explore our handmade collections!';
+    totalEl.textContent = money(0);
+    countEl.textContent = '0 items';
+    return;
+  }
+
+  container.textContent = 'Loading your cart...';
+
+  try {
+    const products = await fetchProducts(cart.map(x => x.id));
+    const byId = new Map(products.map(p => [p.id, p]));
+
+    container.replaceChildren();
+
+    let total = 0;
+    let count = 0;
+
+    for (const entry of cart) {
+      const product = byId.get(entry.id);
+      const quantity = Math.max(
+        1,
+        Math.min(99, Math.floor(Number(entry.quantity) || 1))
+      );
+
+      const row = document.createElement('div');
+      row.className = 'cart-item';
+
+      if (product && product.image_url) {
+        const img = document.createElement('img');
+        img.src = product.image_url;
+        img.alt = product.name;
+        row.appendChild(img);
+      }
+
+      const info = document.createElement('div');
+      info.className = 'item-info';
+
+      const name = document.createElement('h3');
+      name.textContent = product
+        ? product.name
+        : 'Product no longer available';
+
+      info.appendChild(name);
+
+      if (product) {
+        const price = document.createElement('p');
+        price.textContent = money(product.price_cents) + ' each';
+        info.appendChild(price);
+
+        const stock = Math.max(0, Number(product.inventory) || 0);
+
+        const stockText = document.createElement('p');
+        stockText.textContent = stock > 0
+          ? stock + ' available'
+          : 'Out of stock';
+        info.appendChild(stockText);
+
+        if (stock > 0) {
+          const controls = document.createElement('div');
+          controls.className = 'quantity';
+
+          const minus = document.createElement('button');
+          minus.textContent = '−';
+          minus.setAttribute('aria-label', 'Decrease quantity');
+          minus.disabled = quantity <= 1;
+          minus.onclick = () => changeQuantity(entry.id, -1);
+
+          const number = document.createElement('span');
+          number.textContent = quantity;
+
+          const plus = document.createElement('button');
+          plus.textContent = '+';
+          plus.setAttribute('aria-label', 'Increase quantity');
+          plus.disabled = quantity >= Math.min(stock, 99);
+          plus.onclick = () => changeQuantity(entry.id, 1);
+
+          controls.append(minus, number, plus);
+          info.appendChild(controls);
+
+          const effectiveQuantity = Math.min(quantity, stock);
+          total += Number(product.price_cents) * effectiveQuantity;
+          count += effectiveQuantity;
+        }
+      }
+
+      const remove = document.createElement('button');
+      remove.textContent = 'Remove';
+      remove.className = 'remove';
+      remove.onclick = () => {
+        saveCart(getCart().filter(x => x.id !== entry.id));
+        renderCart();
+      };
+
+      info.appendChild(remove);
+      row.appendChild(info);
+      container.appendChild(row);
+    }
+
+    totalEl.textContent = money(total);
+    countEl.textContent = count + (count === 1 ? ' item' : ' items');
+
+  } catch (error) {
+    container.textContent =
+      'Could not load your cart. Please refresh and try again.';
+    console.error(error);
+  }
+}
+
+function changeQuantity(id, delta) {
+  const cart = getCart();
+
+  const item = cart.find(x => x.id === id);
+  if (!item) return;
+
+  item.quantity = Math.max(
+    1,
+    Math.min(99, Number(item.quantity || 1) + delta)
+  );
+
+  saveCart(cart);
+  renderCart();
+}
+
+renderCart();
+</script>
+</body>
+</html>
