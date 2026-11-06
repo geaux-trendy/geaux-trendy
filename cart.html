@@ -152,7 +152,9 @@ footer {
     <p id="itemCount">0 items</p>
     <p class="total" id="cartTotal">$0.00</p>
 
-    <button disabled>Checkout — Coming Soon</button>
+    <button id="checkoutBtn" disabled onclick="startCheckout()">
+  Secure Checkout
+</button>
 
     <p class="notice">
       Secure checkout and seller payments are being prepared.
@@ -325,7 +327,7 @@ async function renderCart() {
 
     totalEl.textContent = money(total);
     countEl.textContent = count + (count === 1 ? ' item' : ' items');
-
+document.getElementById('checkoutBtn').disabled = count === 0;
   } catch (error) {
     container.textContent =
       'Could not load your cart. Please refresh and try again.';
@@ -346,6 +348,47 @@ function changeQuantity(id, delta) {
 
   saveCart(cart);
   renderCart();
+}
+
+async function startCheckout() {
+  const button = document.getElementById('checkoutBtn');
+  button.disabled = true;
+  button.textContent = 'Opening secure checkout...';
+
+  try {
+    const cart = getCart();
+    if (!cart.length) throw new Error('Your cart is empty.');
+
+    const response = await fetch(
+      SUPABASE_URL + '/functions/v1/create-checkout',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY
+        },
+        body: JSON.stringify({
+          items: cart.map(item => ({
+            id: item.id,
+            quantity: Number(item.quantity)
+          }))
+        })
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Unable to start checkout.');
+    }
+
+    const data = await response.json();
+    if (!data.url) throw new Error('No payment link returned.');
+
+    window.location.href = data.url;
+  } catch (error) {
+    alert(error.message);
+    button.textContent = 'Secure Checkout';
+    button.disabled = false;
+  }
 }
 
 renderCart();
