@@ -57,6 +57,14 @@ async function loadPublicProducts() {
       return;
     }
 
+    // Show available products first and sold-out products last.
+    products.sort((a, b) => {
+      const aSoldOut = Number(a.inventory) <= 0;
+      const bSoldOut = Number(b.inventory) <= 0;
+
+      return Number(aSoldOut) - Number(bSoldOut);
+    });
+
     products.forEach(product => {
       const soldOut = product.inventory <= 0;
 
