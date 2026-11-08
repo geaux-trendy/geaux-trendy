@@ -1,7 +1,28 @@
-const notice=document.querySelector('#notice');
-document.querySelectorAll('[data-category]').forEach(link=>link.addEventListener('click',event=>{event.preventDefault();notice.textContent=`${link.dataset.category} products are coming soon!`;notice.scrollIntoView({behavior:'smooth',block:'nearest'});}));
-document.querySelector('#search-form').addEventListener('submit',event=>{event.preventDefault();const query=document.querySelector('#search').value.trim();notice.textContent=query?`Search for “${query}” will be available when sellers start listing products.`:'Enter something to search for.';document.querySelector('#categories').scrollIntoView({behavior:'smooth'});});
 
+const notice = document.querySelector('#notice');
+
+document.querySelectorAll('[data-category]').forEach(link =>
+  link.addEventListener('click', event => {
+    event.preventDefault();
+    notice.textContent =
+      `${link.dataset.category} products are coming soon!`;
+    notice.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest'
+    });
+  })
+);
+
+document.querySelector('#search-form').addEventListener('submit', event => {
+  event.preventDefault();
+  const query = document.querySelector('#search').value.trim();
+  notice.textContent = query
+    ? `Search for “${query}” will be available when sellers start listing products.`
+    : 'Enter something to search for.';
+  document.querySelector('#categories').scrollIntoView({
+    behavior: 'smooth'
+  });
+});
 
 async function loadPublicProducts() {
   const gallery = document.getElementById('productGallery');
@@ -16,7 +37,7 @@ async function loadPublicProducts() {
   try {
     const url = projectUrl +
       '/rest/v1/products' +
-      '?select=id,name,price_cents,image_url,category' +
+      '?select=id,name,price_cents,image_url,category,inventory' +
       '&is_active=eq.true' +
       '&order=created_at.desc&limit=60';
 
@@ -37,6 +58,8 @@ async function loadPublicProducts() {
     }
 
     products.forEach(product => {
+      const soldOut = product.inventory <= 0;
+
       const card = document.createElement('article');
       card.style.cssText =
         'background:white;border-radius:12px;' +
@@ -70,22 +93,39 @@ async function loadPublicProducts() {
       category.style.color = '#795b49';
 
       card.append(name, price, category);
-      
-const link = document.createElement('a');
-link.href = 'product.html?id=' + encodeURIComponent(product.id);
-link.style.display = 'block';
-link.style.color = 'inherit';
-link.style.textDecoration = 'none';
 
-link.appendChild(card);
-gallery.appendChild(link);
+      if (soldOut) {
+        const badge = document.createElement('p');
+        badge.textContent = 'SOLD OUT';
+        badge.style.cssText =
+          'background:#22130c;color:white;' +
+          'padding:9px 12px;border-radius:6px;' +
+          'font-weight:bold;text-align:center;';
+        card.appendChild(badge);
+      } else {
+        const stock = document.createElement('p');
+        stock.textContent =
+          product.inventory + ' available';
+        stock.style.color = '#795b49';
+        card.appendChild(stock);
+      }
 
+      const link = document.createElement('a');
+      link.href = 'product.html?id=' +
+        encodeURIComponent(product.id);
+      link.style.display = 'block';
+      link.style.color = 'inherit';
+      link.style.textDecoration = 'none';
+
+      link.appendChild(card);
+      gallery.appendChild(link);
     });
 
     message.textContent = '';
 
   } catch (error) {
-    message.textContent = 'Products could not be loaded: ' + error.message;
+    message.textContent =
+      'Products could not be loaded: ' + error.message;
   }
 }
 
