@@ -270,11 +270,18 @@
 
 currentProduct = item;
 
+
 if (Number(item.inventory) > 0) {
   addToCartButton.disabled = false;
+  addToCartButton.textContent = 'Add to Cart';
+  addToCartButton.style.background = '#795640';
 } else {
-  addToCartButton.textContent = 'Out of Stock';
+  addToCartButton.disabled = true;
+  addToCartButton.textContent = 'SOLD OUT';
+  addToCartButton.style.background = '#777777';
+  addToCartButton.style.cursor = 'not-allowed';
 }
+
 
         document.title = item.name + ' | Geaux Trendy';
 
