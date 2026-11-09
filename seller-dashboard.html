@@ -186,8 +186,35 @@ publish.addEventListener('click', async () => {
   if (!confirm(`Do you want to ${action} "${item.name}"?`)) {
     return;
   }
+if (!item.is_active) {
+  const { data: membership, error: membershipError } = await db
+    .from('seller_subscriptions')
+    .select('status, trial_end, current_period_end, cancel_at_period_end')
+    .eq('shop_id', shop.id)
+    .maybeSingle();
 
-  publish.disabled = true;
+  if (membershipError) {
+    status('Could not verify seller membership.', true);
+    return;
+  }
+
+  const now = Date.now();
+
+  const canPublish = membership &&
+    (
+      (membership.status === 'trialing' &&
+        membership.trial_end &&
+        new Date(membership.trial_end).getTime() > now) ||
+      (membership.status === 'active' &&
+        (!membership.current_period_end ||
+          new Date(membership.current_period_end).getTime() > now))
+    );
+
+  if (!canPublish) {
+    status('An active seller membership or valid free trial is required to publish products.', true);
+    return;
+  }
+}  publish.disabled = true;
 
   try {
     const { error } = await db
