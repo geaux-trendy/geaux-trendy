@@ -115,7 +115,11 @@ if (startMembershipBtn) {
     membershipCancellationEl.textContent = '';
     return;
   }
-
+if (startMembershipBtn) {
+  startMembershipBtn.hidden =
+    data.trial_used === true ||
+    !['not_started', 'canceled', 'incomplete_expired'].includes(data.status);
+}
   membershipStatusEl.textContent =
     'Membership status: ' +
     (data.status === 'trialing' ? 'Free Trial' : data.status);
