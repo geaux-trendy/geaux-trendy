@@ -141,7 +141,12 @@ async function loadShop(userId){
  const {data,error}=await db.from('shops').select('id,shop_name').eq('owner_id',userId).maybeSingle();
  if(error){showLogin();status('Could not load shop: '+error.message,true);return}
  if(!data){showLogin();status('No shop is linked to this account yet. Contact the marketplace administrator.',true);return}
- shop=data;document.getElementById('shopName').textContent=shop.shop_name;showDashboard();status('Signed in successfully.');await loadProducts();
+ shop = data;
+document.getElementById('shopName').textContent = shop.shop_name;
+showDashboard();
+status('Signed in successfully.');
+await loadProducts();
+await loadMembership();
 }
 async function loadProducts(){
  const {data,error}=await db.from('products').select('id,name,description,price_cents,inventory,image_url,category,is_active').eq('shop_id',shop.id).order('name');
