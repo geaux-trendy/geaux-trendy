@@ -95,7 +95,7 @@ const membershipCancellationEl = document.getElementById('membershipCancellation
 
   const { data, error } = await db
     .from('seller_subscriptions')
-    .select('status, trial_end, current_period_end, cancel_at_period_end')
+    .select('status, trial_used, trial_end, current_period_end, cancel_at_period_end')
     .eq('shop_id', shop.id)
     .maybeSingle();
 
