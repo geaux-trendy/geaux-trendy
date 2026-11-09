@@ -104,7 +104,11 @@ const membershipCancellationEl = document.getElementById('membershipCancellation
     console.error('Membership error:', error);
     return;
   }
+const startMembershipBtn = document.getElementById('startMembershipBtn');
 
+if (startMembershipBtn) {
+  startMembershipBtn.hidden = true;
+}
   if (!data) {
     membershipStatusEl.textContent = 'Membership status: Not started';
     membershipTrialEndEl.textContent = '';
