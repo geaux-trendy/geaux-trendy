@@ -90,6 +90,43 @@ let db, shop, items = [], editingId = null;
   const membershipStatusEl = document.getElementById('membershipStatus');
 const membershipTrialEndEl = document.getElementById('membershipTrialEnd');
 const membershipCancellationEl = document.getElementById('membershipCancellation');
+  async function loadMembership() {
+  if (!db || !shop) return;
+
+  const { data, error } = await db
+    .from('seller_subscriptions')
+    .select('status, trial_end, current_period_end, cancel_at_period_end')
+    .eq('shop_id', shop.id)
+    .maybeSingle();
+
+  if (error) {
+    membershipStatusEl.textContent = 'Membership status: Unable to load';
+    console.error('Membership error:', error);
+    return;
+  }
+
+  if (!data) {
+    membershipStatusEl.textContent = 'Membership status: Not started';
+    membershipTrialEndEl.textContent = '';
+    membershipCancellationEl.textContent = '';
+    return;
+  }
+
+  membershipStatusEl.textContent =
+    'Membership status: ' +
+    (data.status === 'trialing' ? 'Free Trial' : data.status);
+
+  membershipTrialEndEl.textContent = data.trial_end
+    ? 'Trial ends: ' + new Date(data.trial_end).toLocaleDateString()
+    : '';
+
+  membershipCancellationEl.textContent = data.cancel_at_period_end
+    ? 'Cancellation scheduled for: ' +
+      (data.current_period_end
+        ? new Date(data.current_period_end).toLocaleDateString()
+        : 'End of billing period')
+    : '';
+}
 function status(message, isError=false){statusEl.textContent=message;statusEl.className=isError?'error':'success'}
 function showLogin(){loginEl.classList.remove('hidden');dashboardEl.classList.add('hidden')}
 function showDashboard(){loginEl.classList.add('hidden');dashboardEl.classList.remove('hidden')}
