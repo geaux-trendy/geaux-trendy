@@ -87,6 +87,9 @@ const dashboardEl = document.getElementById('dashboard');
 const productsEl = document.getElementById('products');
 const form = document.getElementById('productForm');
 let db, shop, items = [], editingId = null;
+  const membershipStatusEl = document.getElementById('membershipStatus');
+const membershipTrialEndEl = document.getElementById('membershipTrialEnd');
+const membershipCancellationEl = document.getElementById('membershipCancellation');
 function status(message, isError=false){statusEl.textContent=message;statusEl.className=isError?'error':'success'}
 function showLogin(){loginEl.classList.remove('hidden');dashboardEl.classList.add('hidden')}
 function showDashboard(){loginEl.classList.add('hidden');dashboardEl.classList.remove('hidden')}
